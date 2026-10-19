@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>HPC8 Workspace</title>
+  <style>
+    html,body{margin:0;height:100%;background:#F2F7F5;font-family:'IBM Plex Sans Thai',system-ui,sans-serif}
+    #load{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#0E7C7B;background:radial-gradient(900px 480px at 50% -8%,#EFF8F2,#F2F7F5 62%);z-index:2}
+    #load .ring{width:38px;height:38px;border:4px solid #CDE7E0;border-top-color:#0E7C7B;border-radius:50%;animation:spin .9s linear infinite}
+    #load p{margin:0;font-weight:600;font-size:15px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    iframe{border:0;width:100%;height:100%;display:block;position:relative;z-index:1}
+  </style>
+</head>
+<body>
+  <div id="load"><div class="ring"></div><p>กำลังเปิด HPC8 Workspace…</p></div>
+  <!-- ⬇️ เปลี่ยนเป็นลิงก์ /exec ของเว็บแอปคุณ ถ้า Deploy ใหม่จนลิงก์เปลี่ยน -->
+  <iframe
+    src="https://script.google.com/macros/s/AKfycbz5hoMwstakSo81uSxAIMFYDDm8_RuyRKsNHtrLx88SY3WC9qFM6NRkwWjdNuSzlXIA/exec"
+    allow="clipboard-write; clipboard-read"
+    onload="var l=document.getElementById('load'); if(l) l.style.display='none';"></iframe>
+</body>
+</html>
