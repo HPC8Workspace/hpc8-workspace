@@ -16,44 +16,75 @@
 </head>
 <body>
 <div class="boot" id="boot">กำลังโหลด…</div>
-<!-- 👉 เปลี่ยนลิงก์ด้านล่างให้ตรงกับ Web App ของคุณ (ลงท้ายด้วย /exec) -->
+<!-- 👉 ลิงก์ Web App ของคุณ -->
 <iframe id="app" title="HPC8 Workspace"
   src="https://script.google.com/macros/s/AKfycbz5hoMwstakSo81uSxAIMFYDDm8_RuyRKsNHtrLx88SY3WC9qFM6NRkwWjdNuSzlXIA/exec"
   allow="clipboard-read; clipboard-write; fullscreen"></iframe>
 <script>
 /*
- * HPC8 Workspace — หน้าห่อ (wrapper)
- * วางไฟล์นี้บน GitHub Pages ของคุณ (เช่น hpc8workspace.github.io/hpc8-workspace/index.html)
- * ทำหน้าที่:
- *   1. ซ่อนแบนเนอร์ Google Apps Script ด้วยการฝัง iframe เต็มจอ
- *   2. เก็บ token/email ของผู้ใช้ไว้ที่โดเมนนี้ แทนที่จะพึ่งที่เก็บใน iframe
- *      เพื่อแก้ปัญหา Safari/LINE บน iPhone ล้าง storage ของ iframe ง่าย ทำให้ต้องกรอก
- *      อีเมล+PIN ใหม่ทุกครั้งที่กลับมาเปิด
- * วิธีสื่อสาร: iframe (เว็บแอป) ส่ง postMessage ที่มี field "ctwSync" มาร้องขอ/บันทึก/ลบ
- *   - request          → ตอบด้วย response + token + email
- *   - set   + key+val  → บันทึกใน localStorage ของโดเมนนี้
- *   - del   + key      → ลบ
- * รับเฉพาะ key ที่อยู่ใน whitelist (ctw_token, ctw_email) และตอบเฉพาะต้นทาง Google Apps Script
+ * HPC8 Workspace — หน้าห่อ (wrapper) รุ่นแก้ไขปัญหา Nested Iframe ของ Google Apps Script
+ * เก็บทั้งใน localStorage และ First-party Cookie อายุ 1 ปี บนโดเมน GitHub Pages
  */
 (function () {
   'use strict';
   var ALLOWED_KEYS = { ctw_token: 1, ctw_email: 1 };
+
   function allowOrigin(origin) {
     try {
       var h = new URL(origin).hostname;
       return /\.googleusercontent\.com$/i.test(h) || /(^|\.)google\.com$/i.test(h);
     } catch (e) { return false; }
   }
-  function g(k) { try { return window.localStorage.getItem(k) || ''; } catch (e) { return ''; } }
-  function s(k, v) { try { window.localStorage.setItem(k, String(v || '')); } catch (e) {} }
-  function d(k)    { try { window.localStorage.removeItem(k); } catch (e) {} }
+
+  // อ่านค่าจาก localStorage ก่อน ถ้าไม่มีให้ดึงจาก Cookie สำรอง
+  function getCookie(k) {
+    try {
+      var m = document.cookie.match(new RegExp('(?:^|; )' + k.replace(/([.$?*|{}()[\]\\/+^])/g, '\\$1') + '=([^;]*)'));
+      return m ? decodeURIComponent(m[1]) : '';
+    } catch (e) { return ''; }
+  }
+  function setCookie(k, v) {
+    try {
+      document.cookie = k + '=' + encodeURIComponent(v) + '; max-age=31536000; path=/; SameSite=Lax';
+    } catch (e) {}
+  }
+  function delCookie(k) {
+    try {
+      document.cookie = k + '=; max-age=0; path=/; SameSite=Lax';
+    } catch (e) {}
+  }
+
+  function g(k) {
+    var val = '';
+    try { val = window.localStorage.getItem(k) || ''; } catch (e) {}
+    if (!val) {
+      val = getCookie(k);
+      if (val) { try { window.localStorage.setItem(k, val); } catch (e) {} }
+    }
+    return val;
+  }
+  function s(k, v) {
+    var str = String(v || '');
+    try { window.localStorage.setItem(k, str); } catch (e) {}
+    setCookie(k, str);
+  }
+  function d(k) {
+    try { window.localStorage.removeItem(k); } catch (e) {}
+    delCookie(k);
+  }
 
   window.addEventListener('message', function (e) {
     if (!allowOrigin(e.origin)) return;
     var m = e.data || {};
     if (typeof m.ctwSync !== 'string') return;
     if (m.ctwSync === 'request') {
-      try { e.source.postMessage({ ctwSync: 'response', token: g('ctw_token'), email: g('ctw_email') }, e.origin); } catch (ex) {}
+      try {
+        e.source.postMessage({
+          ctwSync: 'response',
+          token: g('ctw_token'),
+          email: g('ctw_email')
+        }, '*');
+      } catch (ex) {}
     } else if (m.ctwSync === 'set' && ALLOWED_KEYS[m.key]) {
       s(m.key, m.value);
     } else if (m.ctwSync === 'del' && ALLOWED_KEYS[m.key]) {
@@ -63,7 +94,9 @@
 
   // ซ่อนข้อความ "กำลังโหลด…" เมื่อ iframe โหลดเสร็จ
   var ifr = document.getElementById('app'), boot = document.getElementById('boot');
-  ifr.addEventListener('load', function () { if (boot) boot.style.display = 'none'; });
+  ifr.addEventListener('load', function () {
+    if (boot) boot.style.display = 'none';
+  });
 })();
 </script>
 </body>
